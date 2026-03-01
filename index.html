@@ -11,98 +11,295 @@
         crossorigin=""/>
 
   <style>
+    :root {
+      --parchment: rgba(255, 246, 220, 0.93);
+      --ink: #2d1b07;
+      --night-water: #20374f;
+      --kingdom-red: #6f2816;
+      --frame-bg: rgba(255, 248, 229, 0.97);
+    }
+
     html, body { height: 100%; margin: 0; }
-    #map { height: 100%; width: 100%; }
-    .popup-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
-    .popup-meta { font-size: 13px; line-height: 1.35; }
+
+    body {
+      font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      color: var(--ink);
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      background: #130f08;
+      filter: saturate(1.2) contrast(1.05);
+    }
+
     .hint {
-      position: absolute; z-index: 999;
-      top: 12px; left: 12px;
-      background: rgba(255,255,255,0.92);
+      position: absolute;
+      z-index: 999;
+      top: 12px;
+      left: 12px;
+      background: var(--parchment);
+      border: 1px solid rgba(45, 27, 7, 0.35);
       padding: 10px 12px;
       border-radius: 10px;
-      font: 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-      max-width: 320px;
+      font: 13px/1.3 "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+      max-width: 360px;
     }
-    .hint code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+
+    .hint code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .fantasy-pin {
+      font-size: 24px;
+      text-shadow: 0 1px 0 #fff8d9, 0 2px 6px rgba(0, 0, 0, 0.6);
+      transform: translateY(-2px) scale(1);
+      transition: transform 180ms ease, filter 180ms ease;
+      cursor: pointer;
+    }
+
+    .fantasy-pin.is-hovered {
+      transform: translateY(-5px) scale(1.14);
+      filter: drop-shadow(0 0 8px rgba(255, 232, 148, 0.9));
+    }
+
+    .fantasy-label {
+      font-variant: small-caps;
+      letter-spacing: 0.08em;
+      text-shadow: 0 1px 0 rgba(255, 246, 220, 0.8), 0 0 7px rgba(255, 246, 220, 0.45);
+      user-select: none;
+      white-space: nowrap;
+      transition: transform 180ms ease, text-shadow 180ms ease;
+      cursor: pointer;
+    }
+
+    .fantasy-label.is-hovered {
+      transform: scale(1.08);
+      text-shadow: 0 1px 0 rgba(255, 246, 220, 0.95), 0 0 12px rgba(255, 232, 148, 0.9);
+    }
+
+    .fantasy-label--kingdom {
+      color: var(--kingdom-red);
+      font-size: 31px;
+      font-weight: 700;
+    }
+
+    .fantasy-label--ocean {
+      color: var(--night-water);
+      font-size: 28px;
+      font-style: italic;
+      transform: rotate(-8deg);
+    }
+
+    .hover-name {
+      background: rgba(33, 20, 7, 0.9);
+      border: 1px solid rgba(255, 233, 169, 0.5);
+      color: #ffeeb9;
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .leaflet-tooltip-top.hover-name:before {
+      border-top-color: rgba(33, 20, 7, 0.9);
+    }
+
+    .info-frame {
+      position: absolute;
+      z-index: 1100;
+      right: 16px;
+      bottom: 16px;
+      width: min(340px, calc(100vw - 32px));
+      background: var(--frame-bg);
+      border: 1px solid rgba(45, 27, 7, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+      padding: 12px 14px 14px;
+      transform: translateY(14px) scale(0.96);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 190ms ease, transform 190ms ease;
+    }
+
+    .info-frame.is-open {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .info-frame__close {
+      position: absolute;
+      right: 8px;
+      top: 7px;
+      border: none;
+      background: transparent;
+      color: #654111;
+      font-size: 17px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 5px;
+      border-radius: 6px;
+    }
+
+    .info-frame__close:hover {
+      background: rgba(101, 65, 17, 0.12);
+    }
+
+    .info-frame__title { font-size: 18px; font-weight: 700; margin: 0 20px 8px 0; }
+    .info-frame__meta { font-size: 13px; line-height: 1.35; margin: 4px 0; }
   </style>
 </head>
 <body>
   <div id="map"></div>
   <div class="hint">
-    <div><b>Tip:</b> open DevTools → Console.</div>
-    <div>Click the map to get coordinates you can paste into <code>places.js</code>.</div>
+    <div><b>Vazheim Cartographer's Note:</b> hover sigils to read names, click to open lore cards.</div>
+    <div>Scroll mouse wheel to zoom in/out. Click empty map space to close an open card.</div>
   </div>
+
+  <aside id="info-frame" class="info-frame" aria-live="polite" aria-hidden="true">
+    <button class="info-frame__close" id="info-close" aria-label="Close lore card">✕</button>
+    <div id="info-content"></div>
+  </aside>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossorigin=""></script>
 
-  <!-- Your markers/data -->
   <script src="./places.js"></script>
 
   <script>
-    // ---- CONFIG: set these to your image dimensions ----
     const IMG_W = 4000;
     const IMG_H = 4000;
     const IMAGE_URL = './map.jpg';
-
-    // Leaflet uses [lat, lng]. For CRS.Simple, treat:
-    // lat = Y (down), lng = X (right)
     const bounds = [[0, 0], [IMG_H, IMG_W]];
 
     const map = L.map('map', {
       crs: L.CRS.Simple,
       minZoom: -3,
       maxZoom: 2,
-      zoomSnap: 0.25,       // smoother zoom
+      zoomSnap: 0.25,
       zoomDelta: 0.25,
-      wheelPxPerZoomLevel: 90
+      wheelPxPerZoomLevel: 90,
+      scrollWheelZoom: true
     });
 
     L.imageOverlay(IMAGE_URL, bounds).addTo(map);
     map.fitBounds(bounds);
 
-    // Helpful: click to log coordinates
+    const infoFrame = document.getElementById('info-frame');
+    const infoContent = document.getElementById('info-content');
+    const closeButton = document.getElementById('info-close');
+
+    const iconByType = {
+      major_city: L.divIcon({ className: 'fantasy-pin', html: '👑', iconSize: [28, 28], iconAnchor: [14, 14] }),
+      large_town: L.divIcon({ className: 'fantasy-pin', html: '🏰', iconSize: [28, 28], iconAnchor: [14, 14] }),
+      village: L.divIcon({ className: 'fantasy-pin', html: '🛖', iconSize: [28, 28], iconAnchor: [14, 14] }),
+      poi: L.divIcon({ className: 'fantasy-pin', html: '🔮', iconSize: [28, 28], iconAnchor: [14, 14] }),
+      default: L.divIcon({ className: 'fantasy-pin', html: '📍', iconSize: [28, 28], iconAnchor: [14, 14] })
+    };
+
+    function getTypeLabel(item) {
+      if (!item.type) return '';
+      if (item.type === 'poi') return 'special point of interest';
+      return item.type.replace('_', ' ');
+    }
+
+    function infoHtml(item) {
+      const type = getTypeLabel(item);
+      const typeText = type ? `<div class="info-frame__meta"><b>Type:</b> ${type}</div>` : '';
+      const description = item.description ? `<div class="info-frame__meta">${item.description}</div>` : '';
+      const tags = item.tags?.length
+        ? `<div class="info-frame__meta"><b>Traits:</b> ${item.tags.join(', ')}</div>`
+        : '';
+      return `<div class="info-frame__title">${item.name}</div>${typeText}${description}${tags}`;
+    }
+
+    function openInfo(item) {
+      infoContent.innerHTML = infoHtml(item);
+      infoFrame.classList.add('is-open');
+      infoFrame.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeInfo() {
+      infoFrame.classList.remove('is-open');
+      infoFrame.setAttribute('aria-hidden', 'true');
+      infoContent.innerHTML = '';
+    }
+
+    closeButton.addEventListener('click', closeInfo);
+    infoFrame.addEventListener('click', (event) => event.stopPropagation());
+
     map.on('click', (e) => {
+      closeInfo();
       const y = e.latlng.lat.toFixed(1);
       const x = e.latlng.lng.toFixed(1);
       console.log(`Clicked at y=${y}, x=${x}`);
     });
 
-    // ---- Markers from places.js ----
-    // Expected global: window.PLACES = [{ name, x, y, type, description, tags }]
-    const iconByType = {
-      city:   L.divIcon({ className: '', html: '🏙️', iconSize: [24,24], iconAnchor: [12,12] }),
-      town:   L.divIcon({ className: '', html: '🏘️', iconSize: [24,24], iconAnchor: [12,12] }),
-      ruin:   L.divIcon({ className: '', html: '🏚️', iconSize: [24,24], iconAnchor: [12,12] }),
-      fort:   L.divIcon({ className: '', html: '🏰', iconSize: [24,24], iconAnchor: [12,12] }),
-      shrine: L.divIcon({ className: '', html: '⛩️', iconSize: [24,24], iconAnchor: [12,12] }),
-      port:   L.divIcon({ className: '', html: '⚓',  iconSize: [24,24], iconAnchor: [12,12] }),
-      default:L.divIcon({ className: '', html: '📍', iconSize: [24,24], iconAnchor: [12,12] })
-    };
+    function addHoverEffects(marker, item) {
+      marker.bindTooltip(item.name, {
+        direction: 'top',
+        offset: [0, -16],
+        className: 'hover-name',
+        opacity: 0.95,
+        permanent: false,
+        sticky: false
+      });
 
-    function popupHtml(p) {
-      const tags = (p.tags && p.tags.length)
-        ? `<div class="popup-meta"><b>Tags:</b> ${p.tags.join(', ')}</div>`
-        : '';
-      const type = p.type ? `<div class="popup-meta"><b>Type:</b> ${p.type}</div>` : '';
-      const desc = p.description ? `<div class="popup-meta">${p.description}</div>` : '';
-      return `
-        <div class="popup-title">${p.name}</div>
-        ${type}
-        ${desc}
-        ${tags}
-      `;
+      marker.on('mouseover', () => {
+        marker.openTooltip();
+        marker.getElement()?.classList.add('is-hovered');
+      });
+
+      marker.on('mouseout', () => {
+        marker.closeTooltip();
+        marker.getElement()?.classList.remove('is-hovered');
+      });
     }
 
-    (window.PLACES || []).forEach(p => {
-      const icon = iconByType[p.type] || iconByType.default;
-      // lat=y, lng=x
-      L.marker([p.y, p.x], { icon })
-        .addTo(map)
-        .bindPopup(popupHtml(p));
+    function addPin(item) {
+      const icon = iconByType[item.type] || iconByType.default;
+      const marker = L.marker([item.y, item.x], { icon }).addTo(map);
+
+      marker.on('click', (event) => {
+        L.DomEvent.stopPropagation(event);
+        openInfo(item);
+      });
+
+      addHoverEffects(marker, item);
+    }
+
+    function addLabel(item) {
+      const variant = item.type === 'kingdom' ? 'fantasy-label--kingdom' : 'fantasy-label--ocean';
+      const html = `<div class="fantasy-label ${variant}">${item.name}</div>`;
+
+      const marker = L.marker([item.y, item.x], {
+        keyboard: false,
+        icon: L.divIcon({
+          className: '',
+          html,
+          iconSize: [420, 40],
+          iconAnchor: [210, 20]
+        })
+      }).addTo(map);
+
+      marker.on('click', (event) => {
+        L.DomEvent.stopPropagation(event);
+        openInfo(item);
+      });
+
+      addHoverEffects(marker, item);
+    }
+
+    (window.MAP_ITEMS || []).forEach((item) => {
+      if (item.kind === 'text') {
+        addLabel(item);
+      } else {
+        addPin(item);
+      }
     });
   </script>
 </body>
