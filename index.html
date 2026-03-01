@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vazheim Atlas</title>
+
+  <!-- Leaflet (CDN) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; width: 100%; }
+    .popup-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+    .popup-meta { font-size: 13px; line-height: 1.35; }
+    .hint {
+      position: absolute; z-index: 999;
+      top: 12px; left: 12px;
+      background: rgba(255,255,255,0.92);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font: 13px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      max-width: 320px;
+    }
+    .hint code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="hint">
+    <div><b>Tip:</b> open DevTools → Console.</div>
+    <div>Click the map to get coordinates you can paste into <code>places.js</code>.</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+
+  <!-- Your markers/data -->
+  <script src="./places.js"></script>
+
+  <script>
+    // ---- CONFIG: set these to your image dimensions ----
+    const IMG_W = 4000;
+    const IMG_H = 4000;
+    const IMAGE_URL = './map.jpg';
+
+    // Leaflet uses [lat, lng]. For CRS.Simple, treat:
+    // lat = Y (down), lng = X (right)
+    const bounds = [[0, 0], [IMG_H, IMG_W]];
+
+    const map = L.map('map', {
+      crs: L.CRS.Simple,
+      minZoom: -3,
+      maxZoom: 2,
+      zoomSnap: 0.25,       // smoother zoom
+      zoomDelta: 0.25,
+      wheelPxPerZoomLevel: 90
+    });
+
+    L.imageOverlay(IMAGE_URL, bounds).addTo(map);
+    map.fitBounds(bounds);
+
+    // Helpful: click to log coordinates
+    map.on('click', (e) => {
+      const y = e.latlng.lat.toFixed(1);
+      const x = e.latlng.lng.toFixed(1);
+      console.log(`Clicked at y=${y}, x=${x}`);
+    });
+
+    // ---- Markers from places.js ----
+    // Expected global: window.PLACES = [{ name, x, y, type, description, tags }]
+    const iconByType = {
+      city:   L.divIcon({ className: '', html: '🏙️', iconSize: [24,24], iconAnchor: [12,12] }),
+      town:   L.divIcon({ className: '', html: '🏘️', iconSize: [24,24], iconAnchor: [12,12] }),
+      ruin:   L.divIcon({ className: '', html: '🏚️', iconSize: [24,24], iconAnchor: [12,12] }),
+      fort:   L.divIcon({ className: '', html: '🏰', iconSize: [24,24], iconAnchor: [12,12] }),
+      shrine: L.divIcon({ className: '', html: '⛩️', iconSize: [24,24], iconAnchor: [12,12] }),
+      port:   L.divIcon({ className: '', html: '⚓',  iconSize: [24,24], iconAnchor: [12,12] }),
+      default:L.divIcon({ className: '', html: '📍', iconSize: [24,24], iconAnchor: [12,12] })
+    };
+
+    function popupHtml(p) {
+      const tags = (p.tags && p.tags.length)
+        ? `<div class="popup-meta"><b>Tags:</b> ${p.tags.join(', ')}</div>`
+        : '';
+      const type = p.type ? `<div class="popup-meta"><b>Type:</b> ${p.type}</div>` : '';
+      const desc = p.description ? `<div class="popup-meta">${p.description}</div>` : '';
+      return `
+        <div class="popup-title">${p.name}</div>
+        ${type}
+        ${desc}
+        ${tags}
+      `;
+    }
+
+    (window.PLACES || []).forEach(p => {
+      const icon = iconByType[p.type] || iconByType.default;
+      // lat=y, lng=x
+      L.marker([p.y, p.x], { icon })
+        .addTo(map)
+        .bindPopup(popupHtml(p));
+    });
+  </script>
+</body>
+</html>
