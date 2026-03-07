@@ -47,6 +47,78 @@
       max-width: 360px;
     }
 
+    .editor-toggle {
+      position: absolute;
+      z-index: 1000;
+      top: 12px;
+      right: 12px;
+      border: 1px solid rgba(45, 27, 7, 0.35);
+      background: var(--parchment);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: 700 13px/1 "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    }
+
+    .editor-toggle.is-active {
+      background: #3f2a0e;
+      color: #ffecbf;
+      border-color: rgba(255, 233, 169, 0.5);
+    }
+
+    .editor-panel {
+      position: absolute;
+      z-index: 1100;
+      right: 16px;
+      top: 56px;
+      width: min(360px, calc(100vw - 32px));
+      max-height: calc(100vh - 72px);
+      overflow: auto;
+      background: var(--frame-bg);
+      border: 1px solid rgba(45, 27, 7, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+      padding: 12px;
+      display: none;
+    }
+
+    .editor-panel.is-open { display: block; }
+    .editor-panel h2 { margin: 0 0 8px; font-size: 18px; }
+    .editor-panel p { margin: 4px 0 10px; font-size: 12px; }
+    .editor-panel label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700; }
+    .editor-panel input,
+    .editor-panel select,
+    .editor-panel textarea {
+      width: 100%;
+      margin-top: 2px;
+      padding: 7px;
+      box-sizing: border-box;
+      border: 1px solid rgba(45, 27, 7, 0.35);
+      border-radius: 7px;
+      font: 13px/1.2 "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      background: #fffbf0;
+      color: #3a2208;
+    }
+
+    .editor-panel textarea { min-height: 70px; resize: vertical; }
+    .editor-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .editor-actions button {
+      border: 1px solid rgba(45, 27, 7, 0.35);
+      background: #f2dfb7;
+      color: #2d1b07;
+      border-radius: 8px;
+      padding: 8px 9px;
+      font: 700 12px/1 "Palatino Linotype", "Book Antiqua", Palatino, serif;
+      cursor: pointer;
+    }
+
+    .editor-actions button:hover { background: #e9d39f; }
+    .editor-status { margin-top: 8px; font-size: 12px; min-height: 16px; }
+    .export-output { min-height: 180px !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
+
     .hint code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 12px;
@@ -159,6 +231,44 @@
     <div>Scroll mouse wheel to zoom in/out. Click empty map space to close an open card.</div>
   </div>
 
+  <button id="editor-toggle" class="editor-toggle" type="button">Enter Add Location Mode</button>
+
+  <aside id="editor-panel" class="editor-panel" aria-live="polite" aria-hidden="true">
+    <h2>Add location</h2>
+    <p>In edit mode, click the map to place coordinates, then set fields and add it to the map.</p>
+    <form id="editor-form">
+      <label>Name <input id="field-name" type="text" required /></label>
+      <label>Kind
+        <select id="field-kind">
+          <option value="pin">pin</option>
+          <option value="text">text</option>
+        </select>
+      </label>
+      <label>Type
+        <select id="field-type">
+          <option value="major_city">major_city</option>
+          <option value="large_town">large_town</option>
+          <option value="village">village</option>
+          <option value="poi">poi</option>
+          <option value="kingdom">kingdom</option>
+          <option value="ocean">ocean</option>
+        </select>
+      </label>
+      <label>Description <textarea id="field-description"></textarea></label>
+      <label>Tags (comma-separated) <input id="field-tags" type="text" placeholder="trade hub, fortified" /></label>
+      <label>Y (from top) <input id="field-y" type="number" step="0.1" required /></label>
+      <label>X (from left) <input id="field-x" type="number" step="0.1" required /></label>
+      <div class="editor-actions">
+        <button type="submit">Add location</button>
+        <button id="save-places" type="button">Save to places.js</button>
+      </div>
+      <div id="editor-status" class="editor-status"></div>
+      <label>Generated places.js
+        <textarea id="export-output" class="export-output" readonly></textarea>
+      </label>
+    </form>
+  </aside>
+
   <aside id="info-frame" class="info-frame" aria-live="polite" aria-hidden="true">
     <button class="info-frame__close" id="info-close" aria-label="Close lore card">✕</button>
     <div id="info-content"></div>
@@ -192,6 +302,19 @@
     const infoFrame = document.getElementById('info-frame');
     const infoContent = document.getElementById('info-content');
     const closeButton = document.getElementById('info-close');
+    const editorToggle = document.getElementById('editor-toggle');
+    const editorPanel = document.getElementById('editor-panel');
+    const editorForm = document.getElementById('editor-form');
+    const fieldName = document.getElementById('field-name');
+    const fieldKind = document.getElementById('field-kind');
+    const fieldType = document.getElementById('field-type');
+    const fieldDescription = document.getElementById('field-description');
+    const fieldTags = document.getElementById('field-tags');
+    const fieldY = document.getElementById('field-y');
+    const fieldX = document.getElementById('field-x');
+    const savePlacesButton = document.getElementById('save-places');
+    const editorStatus = document.getElementById('editor-status');
+    const exportOutput = document.getElementById('export-output');
 
     const iconByType = {
       major_city: L.divIcon({ className: 'fantasy-pin', html: '👑', iconSize: [28, 28], iconAnchor: [14, 14] }),
@@ -232,8 +355,50 @@
     closeButton.addEventListener('click', closeInfo);
     infoFrame.addEventListener('click', (event) => event.stopPropagation());
 
+    let isEditMode = false;
+
+    function showEditorStatus(message) {
+      editorStatus.textContent = message;
+    }
+
+    function setEditMode(value) {
+      isEditMode = value;
+      editorToggle.classList.toggle('is-active', value);
+      editorToggle.textContent = value ? 'Exit Add Location Mode' : 'Enter Add Location Mode';
+      editorPanel.classList.toggle('is-open', value);
+      editorPanel.setAttribute('aria-hidden', String(!value));
+      showEditorStatus(value ? 'Click on the map to set coordinates.' : '');
+    }
+
+    function updateCoordinateFields(latlng) {
+      fieldY.value = Number(latlng.lat).toFixed(1);
+      fieldX.value = Number(latlng.lng).toFixed(1);
+      showEditorStatus(`Draft coordinate selected: y=${fieldY.value}, x=${fieldX.value}`);
+    }
+
+    function serializePlaces() {
+      return `// x = pixels from LEFT\n// y = pixels from TOP\nwindow.MAP_ITEMS = ${JSON.stringify(window.MAP_ITEMS, null, 2)};\n`;
+    }
+
+    function refreshExportOutput() {
+      exportOutput.value = serializePlaces();
+    }
+
+    editorToggle.addEventListener('click', () => {
+      setEditMode(!isEditMode);
+      if (isEditMode) {
+        refreshExportOutput();
+      }
+    });
+
     map.on('click', (e) => {
       closeInfo();
+
+      if (isEditMode) {
+        updateCoordinateFields(e.latlng);
+        return;
+      }
+
       const y = e.latlng.lat.toFixed(1);
       const x = e.latlng.lng.toFixed(1);
       console.log(`Clicked at y=${y}, x=${x}`);
@@ -301,6 +466,75 @@
         addPin(item);
       }
     });
+
+    editorForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const item = {
+        kind: fieldKind.value,
+        name: fieldName.value.trim(),
+        x: Number.parseFloat(fieldX.value),
+        y: Number.parseFloat(fieldY.value),
+        type: fieldType.value,
+        description: fieldDescription.value.trim(),
+        tags: fieldTags.value
+          .split(',')
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      };
+
+      if (!item.name || Number.isNaN(item.x) || Number.isNaN(item.y)) {
+        showEditorStatus('Missing required fields: name, x, and y are required.');
+        return;
+      }
+
+      window.MAP_ITEMS.push(item);
+
+      if (item.kind === 'text') {
+        addLabel(item);
+      } else {
+        addPin(item);
+      }
+
+      openInfo(item);
+      refreshExportOutput();
+      showEditorStatus(`Added "${item.name}". Use "Save to places.js" to persist changes.`);
+      editorForm.reset();
+      fieldKind.value = 'pin';
+    });
+
+    savePlacesButton.addEventListener('click', async () => {
+      const contents = serializePlaces();
+      refreshExportOutput();
+
+      if (window.showSaveFilePicker) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'places.js',
+            types: [{ description: 'JavaScript', accept: { 'text/javascript': ['.js'] } }]
+          });
+          const writable = await fileHandle.createWritable();
+          await writable.write(contents);
+          await writable.close();
+          showEditorStatus('Saved to places.js using the file picker.');
+          return;
+        } catch (error) {
+          showEditorStatus('Save canceled or unavailable; downloaded places.js instead.');
+        }
+      }
+
+      const blob = new Blob([contents], { type: 'text/javascript' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'places.js';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    refreshExportOutput();
   </script>
 </body>
 </html>
