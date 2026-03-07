@@ -3,56 +3,56 @@
 window.MAP_ITEMS = [
   {
     kind: "pin",
-    name: "Aurethspire",
-    x: 2140,
-    y: 1540,
+    name: "Neuvaz",
+    x: 1824.5,
+    y: 1648.0,
     type: "major_city",
-    description: "A radiant capital of gilded bridges and dragon-glass towers.",
-    tags: ["major city", "capital", "imperial seat"]
+    description: "Vazheim's main port city situated along the Strait of Evercourt.",
+    tags: ["major city", "capital", "port city"]
   },
   {
     kind: "pin",
-    name: "Thornwatch",
-    x: 2460,
-    y: 1905,
+    name: "Almendarde",
+    x: 1387.0,
+    y: 1770.5,
     type: "large_town",
-    description: "A fortified market town guarding the Emberroad pass.",
+    description: "A fortified trading town and port along Vazheim's western coast.",
     tags: ["large town", "trade hub", "walled"]
   },
   {
     kind: "pin",
-    name: "Mossmere Hamlet",
-    x: 1735,
-    y: 2430,
+    name: "Leifsvien",
+    x: 1625.0,
+    y: 1732.1,
     type: "village",
-    description: "A reed-roof village known for moonmilk cheese and hedge charms.",
-    tags: ["village", "farmland", "folk magic"]
+    description: "An oasis-village along the southern reaches of the Vazheim Desert.",
+    tags: ["village", "desert", "oasis"]
   },
   {
     kind: "pin",
-    name: "The Oracle Stone",
-    x: 1340,
-    y: 1120,
+    name: "The Floating Mountain",
+    x: 1504.0,
+    y: 2276.2,
     type: "poi",
-    description: "A singing monolith said to reveal omens on storm nights.",
-    tags: ["point of interest", "mystic", "ancient relic"]
+    description: "A part of the Marchland Mountain Range that's hovering an inch above the ground.",
+    tags: ["point of interest", "mystic", "ancient locale"]
   },
   {
     kind: "text",
-    name: "The Kingdom of Eldorath",
-    x: 2050,
-    y: 1760,
+    name: "The Empire of Vazheim",
+    x: 1629.7,
+    y: 1865.1,
     type: "kingdom",
-    description: "An ancient polity of banners, sky-knights, and ember-crowned courts.",
-    tags: ["kingdom", "polity", "high court"]
+    description: "An ancient empire, currently the hegemon of the western continent.",
+    tags: ["empire", "polity", "hegemon"]
   },
   {
     kind: "text",
-    name: "The Sable Sea",
-    x: 925,
-    y: 2580,
+    name: "The Sea of Evercourt",
+    x: 2194.7,
+    y: 2344.4,
     type: "ocean",
-    description: "Moon-black waters where leviathans and lantern fleets drift together.",
+    description: "Stormy sea shared by the Grand Kingdom of Lavarre and the Empire of Vazheim.",
     tags: ["ocean", "deep water", "storm route"]
   }
 ];
